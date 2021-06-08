@@ -171,7 +171,7 @@ class Transformer(nn.Module):
         src[:, self.seq_len_text:] += self.img_col_embedding(self.img_col_pos)
 
         for layer in self.layers: 
-        src = layer(src, mask)
+            src = layer(src, mask)
 
         logits = self.output(src)
         
