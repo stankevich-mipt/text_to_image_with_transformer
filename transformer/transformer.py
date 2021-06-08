@@ -135,11 +135,24 @@ class Transformer(nn.Module):
         super().__init__()
 
         self.seq_len_image = seq_len_image
+	self.img_dim = int(np.sqrt(seq_len_image))
         self.seq_len_text  = seq_len_text
 
         total_tokens = text_tokens + img_tokens
 
         self.embedding = nn.Embedding(total_tokens, dim_model)
+	
+	# learned embedding for positional information
+	self.text_pos_embedding = nn.Embedding(seq_len_text, dim_model)
+	self.img_row_embedding = nn.Embedding(img_dim, dim_model)
+	self.img_col_embedding = nn.Embedding(img_dim, dim_model)
+	
+	# labels of positions 
+	self.text_pos = torch.arange(seq_len_text, dtype=torch.int, device=src.device).reshape(1, -1, 1)
+	pos_matrix = torch.stack([torch_arange(img_dimg, dtype=torch.int, device=src.device)]*img_dim)
+	self.img_row_pos = pos_matrix.reshape(1, -1, 1)
+	self.img_col_pos = pos_matrix.t.reshape(1, -1, 1)
+	
         self.layers = nn.ModuleList([
             TransformerLayer(dim_model, num_heads, dim_feedforward, dropout)
             for _ in range(num_layers)
@@ -152,11 +165,14 @@ class Transformer(nn.Module):
         src = self.embedding(src)
         seq_len, dimension = src.size(1), src.size(2)
         
-        # add separate pos.encoding for image and text
-        src[:, :self.seq_len_text] += position_encoding(self.seq_len_text, dimension).to(src.device)
-        src[:, self.seq_len_text:] += position_encoding(self.seq_len_image, dimension).to(src.device)
+        # add positional data for text
+        src[:, :self.seq_len_text] += self.text_pos_embedding(self.text_pos)
+	# add positional data for rows and columns of the image
+        src[:, self.seq_len_text:] += self.img_row_embedding(self.img_row_pos)
+        src[:, self.seq_len_text:] += self.img_col_embedding(self.img_col_pos)
 
-        for layer in self.layers: src = layer(src, mask)
+        for layer in self.layers: 
+		src = layer(src, mask)
 
         logits = self.output(src)
         
