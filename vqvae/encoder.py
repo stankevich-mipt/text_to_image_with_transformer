@@ -74,7 +74,7 @@ class Encoder(nn.Module):
 		make_b   = partial(EncoderBlock, n_layers=n_layers)
 
 		blocks   = [
-			('input'  , nn.Conv2d(self.input_channels, self.n_hid, kernel_size=1, stride=1)),
+			('input'  , nn.Conv2d(self.input_channels, self.n_hid, kernel_size=7, padding=3)),
 			('relu'   , nn.ReLU()),
 			('group_1', nn.Sequential(
 				OrderedDict([
