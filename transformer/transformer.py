@@ -18,21 +18,21 @@ def position_encoding(
 
 
 def create_look_ahead_mask(seq):
-	"""
-	A function to create a binrary mask for attention which prohibts 
-	the lookup for the unseen tokens, while predicting the next token of the sequene
-	"""
+    """
+    A function to create a binrary mask for attention which prohibts 
+    the lookup for the unseen tokens, while predicting the next token of the sequene
+    """
 
-	mask_size = seq.size()[1]
-	mask  = np.ones((mask_size, mask_size))
-	mask -= np.tril(mask)
+    mask_size = seq.size()[1]
+    mask  = np.ones((mask_size, mask_size))
+    mask -= np.tril(mask)
 
-	return torch.stack([Tensor(mask) * seq.size(0)], dim=0)
+    return torch.stack([Tensor(mask) * seq.size(0)], dim=0)
 
 def create_pad_mask(seq, pad_token_id):
 
-	mask = (seq == pad_token_id).cpu().long()
-	return torch.stack([mask] * seq.size(1), dim=1) 
+    mask = (seq == pad_token_id).cpu().long()
+    return torch.stack([mask] * seq.size(1), dim=1) 
 
 
 def scaled_dot_product_attention(query, key, value, mask=None) -> Tensor:
@@ -42,7 +42,7 @@ def scaled_dot_product_attention(query, key, value, mask=None) -> Tensor:
 
     scaled_attn_logits = temp / scale
     if mask is not None:
-    	scaled_attn_logits += (mask.to(scaled_attn_logits.device) * (-1e+9))
+        scaled_attn_logits += (mask.to(scaled_attn_logits.device) * (-1e+9))
 
     softmax = F.softmax(scaled_attn_logits, dim=-1)
     return softmax.bmm(value)
@@ -130,29 +130,29 @@ class Transformer(nn.Module):
         dim_model: int = 512, 
         num_heads: int = 8, 
         dim_feedforward: int = 2048, 
-        dropout: float = 0.1, 
-    ):
+        dropout: float = 0.1, ):
+
         super().__init__()
 
         self.seq_len_image = seq_len_image
-		self.img_dim = int(np.sqrt(seq_len_image))
+        self.img_dim = int(np.sqrt(seq_len_image))
         self.seq_len_text  = seq_len_text
 
         total_tokens = text_tokens + img_tokens
 
         self.embedding = nn.Embedding(total_tokens, dim_model)
-	
-		# learned embedding for positional information
-		self.text_pos_embedding = nn.Embedding(seq_len_text, dim_model)
-		self.img_row_embedding = nn.Embedding(img_dim, dim_model)
-		self.img_col_embedding = nn.Embedding(img_dim, dim_model)
-	
-		# labels of positions 
-		self.text_pos = torch.arange(seq_len_text, dtype=torch.int, device=src.device).reshape(1, -1, 1)
-		pos_matrix = torch.stack([torch_arange(img_dimg, dtype=torch.int, device=src.device)]*img_dim)
-		self.img_row_pos = pos_matrix.reshape(1, -1, 1)
-		self.img_col_pos = pos_matrix.t.reshape(1, -1, 1)
-	
+    
+        # learned embedding for positional information
+        self.text_pos_embedding = nn.Embedding(seq_len_text, dim_model)
+        self.img_row_embedding = nn.Embedding(img_dim, dim_model)
+        self.img_col_embedding = nn.Embedding(img_dim, dim_model)
+    
+        # labels of positions 
+        self.text_pos = torch.arange(seq_len_text, dtype=torch.int, device=src.device).reshape(1, -1, 1)
+        pos_matrix = torch.stack([torch_arange(img_dimg, dtype=torch.int, device=src.device)]*img_dim)
+        self.img_row_pos = pos_matrix.reshape(1, -1, 1)
+        self.img_col_pos = pos_matrix.t.reshape(1, -1, 1)
+    
         self.layers = nn.ModuleList([
             TransformerLayer(dim_model, num_heads, dim_feedforward, dropout)
             for _ in range(num_layers)])
@@ -166,12 +166,12 @@ class Transformer(nn.Module):
         
         # add positional data for text
         src[:, :self.seq_len_text] += self.text_pos_embedding(self.text_pos)
-		# add positional data for rows and columns of the image
+        # add positional data for rows and columns of the image
         src[:, self.seq_len_text:] += self.img_row_embedding(self.img_row_pos)
         src[:, self.seq_len_text:] += self.img_col_embedding(self.img_col_pos)
 
         for layer in self.layers: 
-		src = layer(src, mask)
+        src = layer(src, mask)
 
         logits = self.output(src)
         
