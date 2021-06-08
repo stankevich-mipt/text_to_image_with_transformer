@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from tqdm.notebook import tqdm
 from datetime import datetime
 from dataset import *
-from transformer import (
+from transformer.transformer import (
 	Transformer, create_pad_mask, create_look_ahead_mask
 )
 

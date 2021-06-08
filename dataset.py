@@ -114,7 +114,7 @@ class Text2ImageDataset(Dataset):
         if self.annotationsFile is None:
             with open('annotations.txt', 'w') as f: 
                 for sample_name in self.dataset_keys: 
-                    f.writelines(self.dataset[self.split][sample_name]['txt'])
+                    f.writelines(str(np.array(self.dataset[self.split][sample_name]['txt']).astype(str)))
 
             self.annotationsFile = 'annotations.txt'
 
