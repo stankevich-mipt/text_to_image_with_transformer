@@ -23,7 +23,7 @@ def create_look_ahead_mask(seq):
 	the lookup for the unseen tokens, while predicting the next token of the sequene
 	"""
 
-	mask_size = seq.size()[0]
+	mask_size = seq.size()[1]
 	mask  = np.ones((mask_size, mask_size))
 	mask -= np.tril(mask)
 
@@ -141,11 +141,11 @@ class Transformer(nn.Module):
 
         self.embedding = nn.Embedding(total_tokens, dim_model)
         self.layers = nn.ModuleList([
-            TransformerEncoderLayer(dim_model, num_heads, dim_feedforward, dropout)
+            TransformerLayer(dim_model, num_heads, dim_feedforward, dropout)
             for _ in range(num_layers)
         ])
 
-        self.output = Linear(dim_model, total_tokens)
+        self.output = nn.Linear(dim_model, total_tokens)
         
     def forward(self, src, mask=None):
 
@@ -153,8 +153,8 @@ class Transformer(nn.Module):
         seq_len, dimension = src.size(1), src.size(2)
         
         # add separate pos.encoding for image and text
-        src[:text_tokens] += position_encoding(seq_len[:text_tokens], dimension).to(src.device)
-        src[text_tokens:] += position_encoding(seq_len[text_tokens:], dimension).to(src.device)
+        src[:, :self.seq_len_text] += position_encoding(self.seq_len_text, dimension).to(src.device)
+        src[:, self.seq_len_text:] += position_encoding(self.seq_len_image, dimension).to(src.device)
 
         for layer in self.layers: src = layer(src, mask)
 

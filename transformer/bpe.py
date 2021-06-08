@@ -1,4 +1,5 @@
 import re
+import os
 from subword_nmt.get_vocab import get_vocab
 from subword_nmt.learn_bpe import learn_bpe
 from subword_nmt.apply_bpe import BPE
