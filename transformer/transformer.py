@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 from torch import Tensor
+from einops import rearrange
 
 
 def position_encoding(
@@ -27,12 +28,12 @@ def create_look_ahead_mask(seq):
     mask  = np.ones((mask_size, mask_size))
     mask -= np.tril(mask)
 
-    return torch.stack([Tensor(mask) * seq.size(0)], dim=0)
+    return torch.stack([Tensor(mask)] * seq.size(0), dim=0)
 
 def create_pad_mask(seq, pad_token_id):
 
     mask = (seq == pad_token_id).cpu().long()
-    return torch.stack([mask] * seq.size(1), dim=1) 
+    return torch.stack([mask] * seq.size(0), dim=0) 
 
 
 def scaled_dot_product_attention(query, key, value, mask=None) -> Tensor:
@@ -45,6 +46,7 @@ def scaled_dot_product_attention(query, key, value, mask=None) -> Tensor:
         scaled_attn_logits += (mask.to(scaled_attn_logits.device) * (-1e+9))
 
     softmax = F.softmax(scaled_attn_logits, dim=-1)
+
     return softmax.bmm(value)
 
 
@@ -159,6 +161,18 @@ class Transformer(nn.Module):
             for _ in range(num_layers)])
 
         self.output = nn.Linear(dim_model, total_tokens)
+
+        seq_range    = torch.arange(self.seq_len_text + self.seq_len_image)
+        logits_range = torch.arange(total_tokens)
+
+
+        seq_range    = rearrange(seq_range, 'n -> () n ()')
+        logits_range = rearrange(logits_range, 'd -> () () d')
+
+        self.logits_mask = (
+            ((seq_range >= seq_len_text) & (logits_range < img_tokens)) |
+            ((seq_range < seq_len_text) & (logits_range >= img_tokens))
+        )
         
     def forward(self, src, mask=None):
 
@@ -175,5 +189,8 @@ class Transformer(nn.Module):
             src = layer(src, mask)
 
         logits = self.output(src)
+
+        max_neg_value = torch.tensor(-1e+9)
+        logits.masked_fill_(self.logits_mask.to(src.device), max_neg_value) 
         
         return logits
