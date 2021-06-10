@@ -157,20 +157,18 @@ class Trainer():
 
                 batch_index += 1
 
-                if batch_index % 20 == 0: print(loss_value.item())
-
                 if batch_index % save_interval == 0: self.save_model()
 
                 loss_epoch.append(loss_value.item())
 
         
-        loss_history.append(np.mean(np.array(loss_epoch)))
+            loss_history.append(np.mean(np.array(loss_epoch)))
 
-        if plot_loss_history:
-            plt.figure(figsize=(8, 8))
-            plt.plot(loss_history, label='loss')
-            plt.legend()
-            plt.show()
+            if plot_loss_history:
+                plt.figure(figsize=(8, 8))
+                plt.plot(loss_history, label='loss')
+                plt.legend()
+                plt.show()
 
         self.model = self.model.cpu()
 
