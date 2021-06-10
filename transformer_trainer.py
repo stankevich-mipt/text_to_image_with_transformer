@@ -115,13 +115,13 @@ class Trainer():
 
         MAX_TEXT_LEN = self.train_dataset.max_text_length
         weight = torch.ones(self.train_dataset.annotations_language.n_words).to(self.device)
-        weight[__PAD_TEXT_TOKEN__]   = 0.
-        weight[__MASK_IMAGE_TOKEN__] = 0.
+        weight[__PAD_TEXT_TOKEN__]   = 1.
+        weight[__MASK_IMAGE_TOKEN__] = 1.
 
         self.model  = self.model.to(self.device)
 
 
-        criterion = nn.CrossEntropyLoss(weight=weight)
+        criterion = nn.BCELoss()
         batch_index = 0        
 
         if not from_zero: self.load_latest_snapshot()
@@ -144,22 +144,20 @@ class Trainer():
 
                 in_ = b.to(self.device)
 
-                mask = torch.maximum(
-                    create_look_ahead_mask(in_),
-                    create_pad_mask(in_, __PAD_TEXT_TOKEN__)
-                )
+                mask = create_look_ahead_mask(in_)
 
-                target = in_.clone().detach()[:, 1:]
-
-                out = self.model(in_, mask).permute(0, 2, 1)
+                target = F.one_hot(in_.clone().detach()[:, 1:], num_classes=1186).float()
+                out    = F.softmax(self.model(in_, mask), dim=-1)
             
-                loss_value = 1. / 8. * criterion(out[:, :, :MAX_TEXT_LEN], target[:, :MAX_TEXT_LEN]) +\
-                             7. / 8. * criterion(out[:, :, MAX_TEXT_LEN:-1], target[:, MAX_TEXT_LEN:])   
+                loss_value = 1. / 8. * criterion(out[:, :MAX_TEXT_LEN], target[:, :MAX_TEXT_LEN]) +\
+                             7. / 8. * criterion(out[:, MAX_TEXT_LEN:-1], target[:, MAX_TEXT_LEN:])   
             	
                 loss_value.backward()
                 self.optimizer.step()
 
                 batch_index += 1
+
+                if batch_index % 20 == 0: print(loss_value.item())
 
                 if batch_index % save_interval == 0: self.save_model()
 

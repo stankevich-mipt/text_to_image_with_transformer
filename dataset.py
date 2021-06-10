@@ -61,12 +61,12 @@ def tensorFromSentence(lang, sentence, max_text_length):
     
     indexes[0] = __SOS_TEXT_TOKEN__
     ids        = indexesFromSentence(lang, sentence)
-    nonpad_len = min([max_text_length - 1, len(ids)])
+    nonpad_len = min([max_text_length - 2, len(ids)])
     
     for i in range(nonpad_len):
         indexes[i+1] = ids[i]
 
-    indexes[nonpad_len] = __EOS_TEXT_TOKEN__
+    indexes[nonpad_len+1] = __EOS_TEXT_TOKEN__
 
     return torch.tensor(indexes, dtype=torch.long)
 
