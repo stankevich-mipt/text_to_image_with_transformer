@@ -7,8 +7,7 @@ import matplotlib.pyplot as plt
 
 from tqdm.notebook import tqdm
 from datetime import datetime
-from vqvae.dataset import *
-from vqvae.vqvae import vqvae
+from vqvae import vqvae
 
 
 
@@ -128,12 +127,10 @@ class Trainer():
                 self.model.zero_grad()
 
                 in_ = b.to(self.device)
-                out_, diff = model(in_)
+                out_, diff = self.model(in_)
             
-                loss_value = loss(in_, out_) + 0.25 * diff 
+                loss_value = criterion(in_, out_) + 0.25 * diff 
                 loss_value.backward() 
-            	
-                loss_value.backward()
                 self.optimizer.step()
 
                 batch_index += 1

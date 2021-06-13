@@ -7,15 +7,13 @@ import torch.nn.functional as F
 
 
 from PIL import Image
-
+from torch.utils.data import Dataset
 
 class VQVAEDataset(Dataset):
 
     def __init__(self, datasetFile, transform=None, split=0):
         
         self.datasetFile     = datasetFile
-        self.annotationsFile = annotationsFile
-        self.max_text_length = max_text_length
         self.split = 'train' if split == 0 else 'valid' if split == 1 else 'test'
         self.h5py2int = lambda x: int(np.array(x))
 
@@ -32,7 +30,7 @@ class VQVAEDataset(Dataset):
         example = self.dataset[self.split][example_name]
 
         image = bytes(np.array(example['img']))
-        image = Image.open(io.BytesIO(right_image)).resize((64, 64))
-        image = torch.FloatTensor(image).div_(255.)
+        image = Image.open(io.BytesIO(image)).resize((64, 64))
+        image = torch.FloatTensor(np.array(image)).div_(255.).permute(2, 0, 1)
         
         return image
