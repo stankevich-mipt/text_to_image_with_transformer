@@ -7,19 +7,9 @@ import matplotlib.pyplot as plt
 
 from tqdm.notebook import tqdm
 from datetime import datetime
-from dataset import *
-from transformer.transformer import (
-	Transformer, create_pad_mask, create_look_ahead_mask
-)
+from vqvae.dataset import *
+from vqvae.vqvae import vqvae
 
-
-__SOS_IMAGE_TOKEN__  = 64
-__EOS_IMAGE_TOKEN__  = 65
-__MASK_IMAGE_TOKEN__ = 66
-
-__SOS_TEXT_TOKEN__   = 67
-__EOS_TEXT_TOKEN__   = 68
-__PAD_TEXT_TOKEN__   = 69
 
 
 def get_latest_snapshot_name(path):
@@ -113,15 +103,8 @@ class Trainer():
 
     def train(self, n_epochs=100, batch_size=32, save_interval=1000, from_zero=True, plot_loss_history=True):
 
-        MAX_TEXT_LEN = self.train_dataset.max_text_length
-        weight = torch.ones(self.train_dataset.annotations_language.n_words).to(self.device)
-        weight[__PAD_TEXT_TOKEN__]   = 1.
-        weight[__MASK_IMAGE_TOKEN__] = 1.
-
         self.model  = self.model.to(self.device)
-
-
-        criterion = nn.BCELoss()
+        criterion   = nn.MSELoss()
         batch_index = 0        
 
         if not from_zero: self.load_latest_snapshot()
@@ -129,6 +112,8 @@ class Trainer():
         batch_generator = torch.utils.data.DataLoader(
             self.train_dataset, batch_size=32, shuffle=True, num_workers=1
         )
+
+        loss_history = []
 
 
         for i in tqdm(range(n_epochs), desc='Training'):
@@ -143,14 +128,10 @@ class Trainer():
                 self.model.zero_grad()
 
                 in_ = b.to(self.device)
-
-                mask = create_look_ahead_mask(in_)
-
-                target = F.one_hot(in_.clone().detach()[:, 1:], num_classes=1186).float()
-                out    = F.softmax(self.model(in_, mask), dim=-1)
+                out_, diff = model(in_)
             
-                loss_value = 1. / 8. * criterion(out[:, :MAX_TEXT_LEN], target[:, :MAX_TEXT_LEN]) +\
-                             7. / 8. * criterion(out[:, MAX_TEXT_LEN:-1], target[:, MAX_TEXT_LEN:])   
+                loss_value = loss(in_, out_) + 0.25 * diff 
+                loss_value.backward() 
             	
                 loss_value.backward()
                 self.optimizer.step()
@@ -173,6 +154,3 @@ class Trainer():
         self.model = self.model.cpu()
 
         return loss_history
-
-
-
