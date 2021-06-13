@@ -169,7 +169,7 @@ class Transformer(nn.Module):
         seq_range    = rearrange(seq_range, 'n -> () n ()')
         logits_range = rearrange(logits_range, 'd -> () () d')
 
-        self.logits_mask = (
+        self.logits_mask = torch.logical_not(
             ((seq_range >= seq_len_text) & (logits_range < img_tokens)) |
             ((seq_range < seq_len_text) & (logits_range >= img_tokens))
         )

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from transformer.dataset import tensorFromSentence
 from transformer.transformer import create_look_ahead_mask
@@ -37,12 +38,14 @@ def generate_from_text(text, train_dataset, transformer, vqvae, temperature):
 	total_len = transformer.seq_len_image + transformer.seq_len_text 
 
 	in_ = torch.full((1, total_len), __PAD_TEXT_TOKEN__)
-	in_[:, max_len] = __SOS_IMAGE_TOKEN__
-	in_ = in_.to(transformer.device) 
+	in_[:, :max_len  ] = text_as_tensor
+	in_[:, max_len   ] = __SOS_IMAGE_TOKEN__
+	in_[:, max_len+1:] = __MASK_IMAGE_TOKEN__
+	in_ = in_.to(vqvae.device) 
 
 	mask = create_look_ahead_mask(in_)
 
-	for i in range(train_dataset.seq_len_image - 2):
+	for i in range(transformer.seq_len_image - 2):
 		with torch.no_grad(): logits = transformer(in_, mask)
 		next_tokens = torch.multinomial(
 			F.softmax(logits[:, max_len + i] / temperature, dim=-1), 1)
